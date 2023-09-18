@@ -9,9 +9,7 @@ public class Configuration {
     //Island's settings
     public static int maxX = 7;
     public static int maxY = 5;
-
     public static int maxLifeCycles = 10;
-
     public static int predatorsToCreate = 12;
     public static int herbivorousToCreate = 24;
 
@@ -31,7 +29,6 @@ public class Configuration {
     public static int maxTriesToGetPermission = 5;
     public static double foodMultiplierInTheStomachPerCycle = .3;
     public static int maxClassNameLength = 11; //it used for adding spaces to names of classes and names of animals - to align columns in animal's entities when printing
-
 
     static {
         createAndSetMapAnimalsThatCanEat();

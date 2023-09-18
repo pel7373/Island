@@ -51,5 +51,4 @@ public class Cell {
     public double getQuantityPlants() {
         return quantityPlants;
     }
-
 }

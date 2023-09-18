@@ -10,7 +10,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Island {
-
     public static List<Animal> listOfAliveAnimals = new CopyOnWriteArrayList<>();
     protected static Cell[][] islandMap = new Cell[Configuration.maxY][Configuration.maxX];
 
@@ -24,32 +23,6 @@ public class Island {
         if(islandMap[supposedY][supposedX].howManyAnimalsOfThisClassInTheCell(animal.getClass()) >= animal.getMaxAmountPerCell())
             return false;
         return true;
-    }
-
-    private void runGame() {
-        for (int k = 0; k < Configuration.maxLifeCycles; k++) {
-            Statistics.sendMessage(System.lineSeparator() + "=========== Life Cycle #" + k + " =============");
-            for(Animal animal : listOfAliveAnimals) {
-                if(animal.isAlive()) {
-                    if(!animal.isProduceOffspring())
-                        moveAnimalToOtherCell(animal);
-                    else
-                        animal.setProduceOffspring(false);
-                    animal.eat(islandMap[animal.getY()][animal.getX()]);
-                    animal.deathCheck(islandMap[animal.getY()][animal.getX()]);
-                    if(!animal.isProduceOffspring())
-                        animal.reproduce(islandMap[animal.getY()][animal.getX()]);
-                    animal.reducingFoodInTheStomachPerCycle();
-                    Statistics.sendMessage(animal.toString());
-                }
-            };
-
-            if(k < Configuration.maxLifeCycles - 1) {
-                growPlantsInEachCellPerCycle();
-                Statistics.printPlantsInAllCells();
-            }
-        }
-        Statistics.printStatisticsAtTheEnd();
     }
 
     private void createGame() {
@@ -78,6 +51,32 @@ public class Island {
         //Create random herbovorous in random cells
         Statistics.sendMessage("========= Create herbivorous in random cells: =========");
         createAnimalsAndPutToIslandAndListOfAllAnimals(allHerbivorousClass, Configuration.herbivorousToCreate);
+    }
+
+    private void runGame() {
+        for (int k = 0; k < Configuration.maxLifeCycles; k++) {
+            Statistics.sendMessage(System.lineSeparator() + "=========== Life Cycle #" + k + " =============");
+            for(Animal animal : listOfAliveAnimals) {
+                if(animal.isAlive()) {
+                    if(!animal.isProduceOffspring())
+                        moveAnimalToOtherCell(animal);
+                    else
+                        animal.setProduceOffspring(false);
+                    animal.eat(islandMap[animal.getY()][animal.getX()]);
+                    animal.deathCheck(islandMap[animal.getY()][animal.getX()]);
+                    if(!animal.isProduceOffspring())
+                        animal.reproduce(islandMap[animal.getY()][animal.getX()]);
+                    animal.reducingFoodInTheStomachPerCycle();
+                    Statistics.sendMessage(animal.toString());
+                }
+            };
+
+            if(k < Configuration.maxLifeCycles - 1) {
+                growPlantsInEachCellPerCycle();
+                Statistics.printPlantsInAllCells();
+            }
+        }
+        Statistics.printStatisticsAtTheEnd();
     }
 
     private void createAnimalsAndPutToIslandAndListOfAllAnimals(List<Class> animalsClass, int maxAnimals) {
@@ -128,5 +127,4 @@ public class Island {
                 .forEach(arr -> Arrays.stream(arr)
                         .forEach(Cell::multiplyPlantsPerCycle));
     }
-
 }

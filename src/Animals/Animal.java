@@ -22,7 +22,6 @@ public abstract class Animal implements Runnable {
     private double kgFoodForSaturation;
     private double kgFoodInTheStomach;
     private int maxStepsPerMove;
-
     private int howManyDaysWasHungry = 0;
     private boolean isAlive = true;
     private boolean isMovable = true;
@@ -34,23 +33,6 @@ public abstract class Animal implements Runnable {
         countCreatedAnimals++;
         countOfLiveAnimals++;
         createAndSetCommonParameters();
-    }
-
-    public Animal(String picture, String name, double weight, double kgFoodForSaturation, double kgFoodInTheStomach, int maxStepsPerMove, int maxAmountPerCell) {
-        countCreatedAnimals++;
-        countOfLiveAnimals++;
-        this.picture = picture;
-        this.name = name;
-        this.weight = weight;
-        this.kgFoodForSaturation = kgFoodForSaturation;
-        this.kgFoodInTheStomach = kgFoodInTheStomach;
-        this.maxStepsPerMove = maxStepsPerMove;
-        this.maxAmountPerCell = maxAmountPerCell;
-        if(Configuration.animalsThatCanEat.get(this.getClass()) != null)
-            animalsThatMeCanEat = Configuration.animalsThatCanEat.get(this.getClass());
-        nameToPrint = name;
-        nameClassToPrint = getClass().getSimpleName();
-        setMovable();
     }
 
     public void move() {
@@ -114,7 +96,7 @@ public abstract class Animal implements Runnable {
             return;
 
         cell.getListOfAnimals().forEach(animalMeTryToProduceOffspring -> {
-            if(meCanProduceOffspringWithThisAnimal(cell, animalMeTryToProduceOffspring)) {
+            if(isCanProduceOffspringWithThisAnimal(cell, animalMeTryToProduceOffspring)) {
                 Statistics.sendMessage("### REPRODUCING!!! " + getName() + " has produced offspring with: " + animalMeTryToProduceOffspring.getName());
                 setProduceOffspring(true);
                 animalMeTryToProduceOffspring.setProduceOffspring(true);
@@ -127,7 +109,7 @@ public abstract class Animal implements Runnable {
         });
     }
 
-        public void deathCheck(Cell cell) {
+    public void deathCheck(Cell cell) {
         if(Configuration.kgFoodForSaturationAnimal.get(getClass()) == null) {
             Statistics.sendMessage("!!!!! Error! For " + this.getClass().getSimpleName() + "there's no kgFoodForSaturation parameter!!!");
             return;
@@ -135,7 +117,7 @@ public abstract class Animal implements Runnable {
 
         if(Configuration.kgFoodForSaturationAnimal.get(this.getClass()) == 0)
             return;
-        //kgFoodForSaturationAnimal
+
         if(howManyDaysWasHungry >= Configuration.deathAfterHungryDays) {
             killAnimalAndRemoveFromAliveAndCellLists(this, cell);
             countOfDiedOfStarvationAnimals++;
@@ -159,10 +141,6 @@ public abstract class Animal implements Runnable {
     }
     public void setPicture(String picture) {
         this.picture = picture;
-    }
-
-    public String getPicture() {
-        return picture;
     }
 
     public int getMaxAmountPerCell() {
@@ -190,10 +168,6 @@ public abstract class Animal implements Runnable {
         return weight;
     }
 
-    public double getKgFoodForSaturation() {
-        return kgFoodForSaturation;
-    }
-
     public void setKgFoodForSaturation(double kgFoodForSaturation) {
         this.kgFoodForSaturation = kgFoodForSaturation;
     }
@@ -202,16 +176,8 @@ public abstract class Animal implements Runnable {
         return kgFoodInTheStomach;
     }
 
-    public void setKgFoodInTheStomach(double kgFoodInTheStomach) {
-        this.kgFoodInTheStomach = kgFoodInTheStomach;
-    }
-
     public void setMaxStepsPerMove(int maxStepsPerMove) {
         this.maxStepsPerMove = maxStepsPerMove;
-    }
-
-    public int getMaxStepsPerMove() {
-        return maxStepsPerMove;
     }
 
     public boolean isAlive() {
@@ -269,7 +235,6 @@ public abstract class Animal implements Runnable {
     public static int getCountOfDiedOfStarvationAnimals() {
         return countOfDiedOfStarvationAnimals;
     }
-
 
     @Override
     public String toString() {
@@ -390,7 +355,7 @@ public abstract class Animal implements Runnable {
         kgFoodInTheStomach = (kgFoodInTheStomach - reduceFood > 0) ? kgFoodInTheStomach - reduceFood : 0;
     }
 
-    private boolean meCanProduceOffspringWithThisAnimal(Cell cell, Animal animalMeTryToProduceOffspring) {
+    private boolean isCanProduceOffspringWithThisAnimal(Cell cell, Animal animalMeTryToProduceOffspring) {
         if(!animalMeTryToProduceOffspring.isHungry()
                 && this != animalMeTryToProduceOffspring
                 && (getClass() == animalMeTryToProduceOffspring.getClass())
@@ -398,10 +363,5 @@ public abstract class Animal implements Runnable {
                 && cell.howManyAnimalsOfThisClassInTheCell(getClass()) + 1 <= maxAmountPerCell)
             return true;
         return false;
-    }
-    private static <K, V> void printMap(Map<K, V> map) {
-        map.forEach((key, value) -> {
-            System.out.println(key + " ::: " + value);
-        });
     }
 }
