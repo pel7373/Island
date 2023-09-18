@@ -6,36 +6,32 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Configuration {
-/*
-    Bear
-    Boa
-    Boar
-    Buffalo
-    Caterpillar
-    Deer
-    Duck
-    Eagle
-    Fox
-    Goat
-    Horse
-    Mouse
-    Rabbit
-    Sheep
-    Wolf
-    */
-
-    public static int maxX = 5;
+    //Island's settings
+    public static int maxX = 7;
     public static int maxY = 5;
-    public static int maxStartAmountOfPlantsPerCell = 50;
-    public static double plantMultiplierPerCycle = 1.5;
+
+    public static int maxLifeCycles = 10;
+
+    public static int predatorsToCreate = 12;
+    public static int herbivorousToCreate = 24;
+
+    //plant's settings
+    public static double startMaxAmountOfPlantsPerCell = 100;
+    public static double maxAmountOfPlantsPerCell = 200;
+    public static double plantMultiplierPerCycle = 1.2;
+
+    //animal's settings
     public static Map<Class<? extends Animal>, Map<Class<? extends Animal>, Integer>> animalsThatCanEat = new HashMap<>();
-
     public static Map<Class<? extends Animal>, String> pictureAnimal = new HashMap<>();
-
     public static Map<Class<? extends Animal>, Double> weightAnimal = new HashMap<>();
     public static Map<Class<? extends Animal>, Integer> maxAmountPerCellAnimal = new HashMap<>();
     public static Map<Class<? extends Animal>, Integer> maxStepsPerMoveAnimal = new HashMap<>();
     public static Map<Class<? extends Animal>, Double> kgFoodForSaturationAnimal = new HashMap<>();
+    public static int deathAfterHungryDays = 2;
+    public static int maxTriesToGetPermission = 5;
+    public static double foodMultiplierInTheStomachPerCycle = .3;
+    public static int maxClassNameLength = 11; //it used for adding spaces to names of classes and names of animals - to align columns in animal's entities when printing
+
 
     static {
         createAndSetMapAnimalsThatCanEat();
@@ -47,7 +43,7 @@ public class Configuration {
     }
 
     public static String getPicture(Class clazz) {
-        if(clazz != null) // && pictureAnimal.get(clazz) != null)
+        if(clazz != null)
             return pictureAnimal.get(clazz);
         return "";
     }

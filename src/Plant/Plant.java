@@ -1,6 +1,4 @@
 package Plant;
 
-import Island.Organism;
-
-public class Plant extends Organism {
+public class Plant {
 }
