@@ -17,12 +17,66 @@ public class Island {
         Island island = new Island();
         island.createGame();
         island.runGame();
+        Statistics.printStatisticsAtTheEnd();
     }
 
     public static boolean getPermissionToMove(Animal animal, int supposedX, int supposedY) {
-        if(islandMap[supposedY][supposedX].howManyAnimalsOfThisClassInTheCell(animal.getClass()) >= animal.getMaxAmountPerCell())
-            return false;
-        return true;
+        return islandMap[supposedY][supposedX].howManyAnimalsOfThisClassInTheCell(animal.getClass()) < animal.getMaxAmountPerCell();
+    }
+
+    public static Animal createNewAnimalAndPutItToIslandAndAliveAnimalList(Class clazz, int x, int y) {
+        Animal animal;
+        try {
+            animal = (Animal) clazz.getDeclaredConstructor().newInstance();
+            animal.setX(x);
+            animal.setY(y);
+            listOfAliveAnimals.add(animal);
+            islandMap[y][x].add(animal);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                 NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+        return animal;
+    }
+
+    public static void removeAnimalFromTheCell(Animal animal) {
+        islandMap[animal.getY()][animal.getX()].remove(animal);
+    }
+
+    public static void addAnimalToTheCell(Animal animal) {
+        islandMap[animal.getY()][animal.getX()].add(animal);
+    }
+
+    public static String getInfoFromCellWhatCanEat(int x, int y) {
+        return String.format(", not saturated and will try to eat. In it cell now is %d other animal(s) and %.2f kg plants.", (islandMap[y][x].getListOfAnimals().size() - 1), islandMap[y][x].getQuantityPlants());
+    }
+
+    public static void killAnimalAndRemoveFromAliveAndCellLists(int x, int y, Animal animalToKill) {
+        animalToKill.setAlive(false);
+        //remove eaten animal from general list of all animals in Island
+        listOfAliveAnimals.remove(animalToKill);
+        //remove eaten animal from list in the cell
+        islandMap[y][x].remove(animalToKill);
+    }
+
+    public static void reduceEatenPlantsFromTheCell(int x, int y, double eatenPlants) {
+        islandMap[y][x].reduceEatenPlants(eatenPlants);
+    }
+
+    public static List<Animal> getListOfAnimalsInTheCell(int x, int y) {
+        return islandMap[y][x].getListOfAnimals();
+    }
+
+    public static double getQuantityPlantsInTheCell(int x, int y) {
+        return islandMap[y][x].getQuantityPlants();
+    }
+
+    public static double howMuchAllowedToEatPlantsInTheCell(int x, int y, double wantToEatPlant) {
+        return islandMap[y][x].howMuchAllowedToEatPlants(wantToEatPlant);
+    }
+
+    public static int howManyAnimalsOfThisClassInTheCell(int x, int y, Class clazz) {
+        return islandMap[y][x].howManyAnimalsOfThisClassInTheCell(clazz);
     }
 
     private void createGame() {
@@ -48,7 +102,7 @@ public class Island {
         Statistics.sendMessage("========= Create predators in random cells: =========");
         createAnimalsAndPutToIslandAndListOfAllAnimals(allPredatorClass, Configuration.predatorsToCreate);
 
-        //Create random herbovorous in random cells
+        //Create random herbivorous in random cells
         Statistics.sendMessage("========= Create herbivorous in random cells: =========");
         createAnimalsAndPutToIslandAndListOfAllAnimals(allHerbivorousClass, Configuration.herbivorousToCreate);
     }
@@ -57,26 +111,20 @@ public class Island {
         for (int k = 0; k < Configuration.maxLifeCycles; k++) {
             Statistics.sendMessage(System.lineSeparator() + "=========== Life Cycle #" + k + " =============");
             for(Animal animal : listOfAliveAnimals) {
-                if(animal.isAlive()) {
-                    if(!animal.isProduceOffspring())
-                        moveAnimalToOtherCell(animal);
-                    else
-                        animal.setProduceOffspring(false);
-                    animal.eat(islandMap[animal.getY()][animal.getX()]);
-                    animal.deathCheck(islandMap[animal.getY()][animal.getX()]);
-                    if(!animal.isProduceOffspring())
-                        animal.reproduce(islandMap[animal.getY()][animal.getX()]);
-                    animal.reducingFoodInTheStomachPerCycle();
+                animal.move();
+                animal.eat();
+                animal.deathCheck();
+                animal.reproduce();
+                animal.reducingFoodInTheStomachPerCycle();
+                if(animal.isAlive())
                     Statistics.sendMessage(animal.toString());
-                }
-            };
+            }
 
             if(k < Configuration.maxLifeCycles - 1) {
                 growPlantsInEachCellPerCycle();
                 Statistics.printPlantsInAllCells();
             }
         }
-        Statistics.printStatisticsAtTheEnd();
     }
 
     private void createAnimalsAndPutToIslandAndListOfAllAnimals(List<Class> animalsClass, int maxAnimals) {
@@ -89,37 +137,6 @@ public class Island {
             animalsCreated++;
             Statistics.sendMessage("Was created : " + animal);
         }
-    }
-
-    public static Animal createNewAnimalAndPutItToIslandAndAliveAnimalList(Class clazz, int x, int y) {
-        Animal animal = null;
-        try {
-            animal = (Animal) clazz.getDeclaredConstructor().newInstance();
-            animal.setX(x);
-            animal.setY(y);
-            listOfAliveAnimals.add(animal);
-            islandMap[y][x].add(animal);
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-                 NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-        return animal;
-    }
-    private void moveAnimalToOtherCell(Animal animal) {
-        if(!animal.isMovable())
-            return;
-
-        islandMap[animal.getY()][animal.getX()].remove(animal);
-        int oldX = animal.getX();
-        int oldY = animal.getY();
-        animal.move();
-        islandMap[animal.getY()][animal.getX()].add(animal);
-        String beginString = "### MOVE!!! " + animal.getName();
-        String endString = (animal.isFullySaturated()) ? " and saturated!" : String.format(", not saturated and will try to eat. In it cell now is %d other animal(s) and %.2f kg plants.", (islandMap[animal.getY()][animal.getX()].getListOfAnimals().size() - 1), islandMap[animal.getY()][animal.getX()].getQuantityPlants());
-        if(oldX != animal.getX() || oldY != animal.getY())
-            Statistics.sendMessage(beginString + " moved from (x:" + oldX + ", y:" + oldY + ") to (x:" + animal.getX() + ", y:" + animal.getY() + ")" + endString);
-        else
-            Statistics.sendMessage(beginString + " didn't move" + endString);
     }
 
     private static void growPlantsInEachCellPerCycle() {

@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Cell {
-    private List<Animal> listOfAnimals = new CopyOnWriteArrayList<>();
+    private final List<Animal> listOfAnimals = new CopyOnWriteArrayList<>();
     private double quantityPlants = ThreadLocalRandom.current().nextDouble(1,  Configuration.startMaxAmountOfPlantsPerCell + 1);
 
     public void add(Animal animal) {
@@ -23,10 +23,7 @@ public class Cell {
     }
 
     public double howMuchAllowedToEatPlants(double wantToEatPlant) {
-        if(quantityPlants >= wantToEatPlant) {
-            return wantToEatPlant;
-        } else
-            return quantityPlants;
+        return Math.min(quantityPlants, wantToEatPlant);
     }
 
     public int howManyAnimalsOfThisClassInTheCell(Class clazz) {
@@ -44,8 +41,7 @@ public class Cell {
 
     public void multiplyPlantsPerCycle() {
         quantityPlants *= Configuration.plantMultiplierPerCycle;
-        quantityPlants = (quantityPlants > Configuration.maxAmountOfPlantsPerCell) ?
-                Configuration.maxAmountOfPlantsPerCell : quantityPlants;
+        quantityPlants = Math.min(quantityPlants, Configuration.maxAmountOfPlantsPerCell);
     }
 
     public double getQuantityPlants() {

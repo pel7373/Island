@@ -10,8 +10,8 @@ public class Configuration {
     public static int maxX = 7;
     public static int maxY = 5;
     public static int maxLifeCycles = 10;
-    public static int predatorsToCreate = 12;
-    public static int herbivorousToCreate = 24;
+    public static int predatorsToCreate = 16;
+    public static int herbivorousToCreate = 32;
 
     //plant's settings
     public static double startMaxAmountOfPlantsPerCell = 100;
@@ -218,11 +218,5 @@ public class Configuration {
         wolfAnimalsThatCanEat.put(Buffalo.class, 10);
         wolfAnimalsThatCanEat.put(Duck.class, 40);
         animalsThatCanEat.put(Wolf.class, wolfAnimalsThatCanEat);
-    }
-
-    private static <K, V> void printMap(Map<K, V> map) {
-        map.forEach((key, value) -> {
-            System.out.println(key + " ::: " + value);
-        });
     }
 }

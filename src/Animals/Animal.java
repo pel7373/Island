@@ -36,71 +36,68 @@ public abstract class Animal implements Runnable {
     }
 
     public void move() {
-        if(!isMovable)
+        if(!isMovable() || !isAlive() || isProduceOffspring())
             return;
 
-        boolean getPermissionToMove = false;
-        int tryingToGetPermission = 0;
+        Island.removeAnimalFromTheCell(this);
 
-        while(!getPermissionToMove && (tryingToGetPermission < Configuration.maxTriesToGetPermission)) {
-            int supposedX = x;
-            int supposedY = y;
+        int oldX = getX();
+        int oldY = getY();
 
-            //generate stepForThisMove from 1 to include maxStepsPerMove
-            int stepForThisMove = ThreadLocalRandom.current().nextInt(1, maxStepsPerMove + 1);
-            //direction: 0 - up, 1 - rigth, 2 - down, 3 - left
-            switch(ThreadLocalRandom.current().nextInt(0, 4)) {
-                case 0 -> supposedY = Math.abs(supposedY - stepForThisMove);
-                case 1 -> supposedX = (supposedX + stepForThisMove > (Configuration.maxX - 1)) ? Configuration.maxX - 2 : supposedX + stepForThisMove;
-                case 2 -> supposedY = (supposedY + stepForThisMove > (Configuration.maxY - 1)) ? Configuration.maxY - 2 : supposedY + stepForThisMove;
-                case 3 -> supposedX = Math.abs(supposedX - stepForThisMove);
-            }
+        tryToMove();
+        Island.addAnimalToTheCell(this);
 
-            if(supposedX != x || supposedY != y) {
-                tryingToGetPermission++;
-                if(Island.getPermissionToMove(this, supposedX, supposedY)) {
-                    getPermissionToMove = true;
-                    x = supposedX;
-                    y = supposedY;
-                }
-            }
-        }
+        //Write statistics
+        String beginString = "### MOVE!!! " + getName();
+        String endString = (isFullySaturated()) ? " and saturated!" : Island.getInfoFromCellWhatCanEat(getX(), getY());
+        if(oldX != getX() || oldY != getY())
+            Statistics.sendMessage(beginString + " moved from (x:" + oldX + ", y:" + oldY + ") to (x:" + getX() + ", y:" + getY() + ")" + endString);
+        else
+            Statistics.sendMessage(beginString + " didn't move" + endString);
+
     }
 
-    public void eat(Cell cell) {
+    public void eat() {
         //try to eat animals
-        if(!isFullySaturated() && isThereAnyAnimalMeCanEatInThisCell(cell) ) {
-            //try to eat animals from cell
-            cell.getListOfAnimals().forEach(animalMeTryToEat -> {
+        if(isAlive() && !isFullySaturated() && isThereAnyAnimalMeCanEatInThisCell() ) {
+            //try to eat animals from the cell
+            Island.getListOfAnimalsInTheCell(x, y).forEach(animalMeTryToEat -> {
                 if(!isFullySaturated() && isMeCanEatThisAnimal(animalMeTryToEat)) {
                     putEatenAnimalInMyStomach(animalMeTryToEat);
                     Statistics.sendMessage(String.format("EATING ANIMAL!!!  %s has eaten %s! Food in the stomach: %.2f.", getName(), animalMeTryToEat.getName(), kgFoodInTheStomach));
-                    killAnimalAndRemoveFromAliveAndCellLists(animalMeTryToEat, cell);
+                    Island.killAnimalAndRemoveFromAliveAndCellLists(x, y, animalMeTryToEat);
+                    countOfLiveAnimals--;
                     countOfEatenAnimals++;
                 }
             });
         }
 
         //try to eat plants
-        if(!isFullySaturated()
+        if(isAlive()
+                &&!isFullySaturated()
                 && isMeAllowedToEatPlants()
-                && cell.getQuantityPlants() > 0
+                && Island.getQuantityPlantsInTheCell(x, y) > 0
         ) {
-            double eatenPlants = mePutEatenPlantsInTheStomachAndRemoveItFromTheCellAndReturnValueOfEatenPlants(cell);
-            Statistics.sendMessage(String.format("### EATING PLANTS!!! %s has eaten %.2f kg plant food! Food in the stomach: %.2f. Plants left in the cell: %.2f kg.", getName(), eatenPlants, kgFoodInTheStomach, cell.getQuantityPlants()));
+            double eatenPlants = putEatenPlantsInMyStomachAndRemoveItFromTheCellAndReturnValueOfEatenPlants();
+            Statistics.sendMessage(String.format("### EATING PLANTS!!! %s has eaten %.2f kg plant food! Food in the stomach: %.2f kg.", getName(), eatenPlants, kgFoodInTheStomach));
         }
     }
 
-    public void reproduce(Cell cell) {
-        if(isHungry())
+    public void reproduce() {
+        if(!isAlive || isHungry())
             return;
 
-        cell.getListOfAnimals().forEach(animalMeTryToProduceOffspring -> {
-            if(isCanProduceOffspringWithThisAnimal(cell, animalMeTryToProduceOffspring)) {
+        if(isProduceOffspring()) {
+            setProduceOffspring(false);
+            return;
+        }
+
+        Island.getListOfAnimalsInTheCell(x, y).forEach(animalMeTryToProduceOffspring -> {
+            if(isCanProduceOffspringWithThisAnimal(animalMeTryToProduceOffspring)) {
                 Statistics.sendMessage("### REPRODUCING!!! " + getName() + " has produced offspring with: " + animalMeTryToProduceOffspring.getName());
                 setProduceOffspring(true);
                 animalMeTryToProduceOffspring.setProduceOffspring(true);
-                Animal animal = Island.createNewAnimalAndPutItToIslandAndAliveAnimalList(getClass(), getX(), getY());
+                Animal animal = Island.createNewAnimalAndPutItToIslandAndAliveAnimalList(getClass(), x, y);
                 //set true to newborn animal - that no one in this cycle tries to produce offspring with it
                 animal.setProduceOffspring(true);
                 countOfBornAnimals++;
@@ -109,7 +106,7 @@ public abstract class Animal implements Runnable {
         });
     }
 
-    public void deathCheck(Cell cell) {
+    public void deathCheck() {
         if(Configuration.kgFoodForSaturationAnimal.get(getClass()) == null) {
             Statistics.sendMessage("!!!!! Error! For " + this.getClass().getSimpleName() + "there's no kgFoodForSaturation parameter!!!");
             return;
@@ -119,7 +116,8 @@ public abstract class Animal implements Runnable {
             return;
 
         if(howManyDaysWasHungry >= Configuration.deathAfterHungryDays) {
-            killAnimalAndRemoveFromAliveAndCellLists(this, cell);
+            Island.killAnimalAndRemoveFromAliveAndCellLists(x, y, this);
+            countOfLiveAnimals--;
             countOfDiedOfStarvationAnimals++;
             return;
         }
@@ -129,9 +127,7 @@ public abstract class Animal implements Runnable {
     }
 
     public boolean isFullySaturated() {
-        if(kgFoodForSaturation > kgFoodInTheStomach)
-            return false;
-        return true;
+        return kgFoodForSaturation <= kgFoodInTheStomach;
     }
 
     public boolean isHungry() {
@@ -170,10 +166,6 @@ public abstract class Animal implements Runnable {
 
     public void setKgFoodForSaturation(double kgFoodForSaturation) {
         this.kgFoodForSaturation = kgFoodForSaturation;
-    }
-
-    public double getKgFoodInTheStomach() {
-        return kgFoodInTheStomach;
     }
 
     public void setMaxStepsPerMove(int maxStepsPerMove) {
@@ -248,8 +240,6 @@ public abstract class Animal implements Runnable {
         if(countAddSpaces < 0)
             countAddSpaces = 0;
 
-        StringBuilder s = new StringBuilder();
-
         return String.format("Animal{" +
                 nameClassToPrint +
                 ", name='" + nameToPrint + '\'' +
@@ -288,31 +278,46 @@ public abstract class Animal implements Runnable {
     }
 
     private void setMovable() {
-        if(Configuration.maxStepsPerMoveAnimal.get(this.getClass()) != null && Configuration.maxStepsPerMoveAnimal.get(this.getClass()) > 0)
-            isMovable = true;
-        else
-            isMovable = false;
+        isMovable = Configuration.maxStepsPerMoveAnimal.get(this.getClass()) != null && Configuration.maxStepsPerMoveAnimal.get(this.getClass()) > 0;
     }
 
     private void putEatenAnimalInMyStomach(Animal animalTryToEat) {
-        kgFoodInTheStomach = (kgFoodInTheStomach + animalTryToEat.getWeight() > kgFoodForSaturation) ? kgFoodForSaturation : kgFoodInTheStomach + animalTryToEat.getWeight();
+        kgFoodInTheStomach = Math.min(kgFoodInTheStomach + animalTryToEat.getWeight(), kgFoodForSaturation);
     }
 
-    private void killAnimalAndRemoveFromAliveAndCellLists(Animal animalToKill, Cell cell) {
-        animalToKill.setAlive(false);
-        //remove eaten animal from general list of all animals in Island
-        Island.listOfAliveAnimals.remove(animalToKill);
-        countOfLiveAnimals--;
-        //remove eaten animal from list in the cell
-        cell.remove(animalToKill);
+    private void tryToMove(){
+        boolean getPermissionToMove = false;
+        int tryingToGetPermission = 0;
+
+        while(!getPermissionToMove && (tryingToGetPermission < Configuration.maxTriesToGetPermission)) {
+            int supposedX = x;
+            int supposedY = y;
+
+            //generate stepForThisMove from 1 to include maxStepsPerMove
+            int stepForThisMove = ThreadLocalRandom.current().nextInt(1, maxStepsPerMove + 1);
+            //direction: 0 - up, 1 - right, 2 - down, 3 - left
+            switch(ThreadLocalRandom.current().nextInt(0, 4)) {
+                case 0 -> supposedY = Math.abs(supposedY - stepForThisMove);
+                case 1 -> supposedX = (supposedX + stepForThisMove > (Configuration.maxX - 1)) ? Configuration.maxX - 2 : supposedX + stepForThisMove;
+                case 2 -> supposedY = (supposedY + stepForThisMove > (Configuration.maxY - 1)) ? Configuration.maxY - 2 : supposedY + stepForThisMove;
+                case 3 -> supposedX = Math.abs(supposedX - stepForThisMove);
+            }
+
+            if(supposedX != x || supposedY != y) {
+                tryingToGetPermission++;
+                if(Island.getPermissionToMove(this, supposedX, supposedY)) {
+                    getPermissionToMove = true;
+                    x = supposedX;
+                    y = supposedY;
+                }
+            }
+        }
     }
 
-    private boolean isThereAnyAnimalMeCanEatInThisCell(Cell cell) {
-        if(cell.getListOfAnimals().size() > 1
+    private boolean isThereAnyAnimalMeCanEatInThisCell() {
+        return Island.getListOfAnimalsInTheCell(x, y).size() > 1
                 && animalsThatMeCanEat != null
-                && animalsThatMeCanEat.size() > 0)
-            return true;
-        return false;
+                && animalsThatMeCanEat.size() > 0;
     }
 
     private boolean isMeCanEatThisAnimal(Animal animalMeTryToEat) {
@@ -322,20 +327,17 @@ public abstract class Animal implements Runnable {
             chanceToKill.set(ThreadLocalRandom.current().nextInt(0, 100 + 1));
             int probabilityToEat = animalsThatMeCanEat.get(animalMeTryToEat.getClass());
             int chanceToKillInt = chanceToKill.get();
-            if(chanceToKillInt <= probabilityToEat)
-                return true;
+            return chanceToKillInt <= probabilityToEat;
         }
         return false;
     }
 
     private boolean isMeAllowedToEatPlants() {
-        if(Animals.HerbivorousAnimal.class.isAssignableFrom(this.getClass()))
-            return true;
-        return false;
+        return HerbivorousAnimal.class.isAssignableFrom(this.getClass());
     }
 
-    private double mePutEatenPlantsInTheStomachAndRemoveItFromTheCellAndReturnValueOfEatenPlants(Cell cell) {
-        double howMuchAllowedToEatPlants = cell.howMuchAllowedToEatPlants(kgFoodForSaturation - kgFoodInTheStomach);
+    private double putEatenPlantsInMyStomachAndRemoveItFromTheCellAndReturnValueOfEatenPlants() {
+        double howMuchAllowedToEatPlants = Island.howMuchAllowedToEatPlantsInTheCell(x, y, kgFoodForSaturation - kgFoodInTheStomach);
         double eatenPlants = howMuchAllowedToEatPlants;
         if(howMuchAllowedToEatPlants > 0) {
             if (kgFoodInTheStomach + howMuchAllowedToEatPlants > kgFoodForSaturation) {
@@ -345,23 +347,24 @@ public abstract class Animal implements Runnable {
                 eatenPlants = howMuchAllowedToEatPlants;
                 kgFoodInTheStomach += howMuchAllowedToEatPlants;
             }
-            cell.reduceEatenPlants(eatenPlants);
+            Island.reduceEatenPlantsFromTheCell(x, y, eatenPlants);
         }
         return eatenPlants;
     }
 
     public void reducingFoodInTheStomachPerCycle() {
+        if(!isAlive())
+            return;
+
         double reduceFood = Configuration.foodMultiplierInTheStomachPerCycle * kgFoodForSaturation;
         kgFoodInTheStomach = (kgFoodInTheStomach - reduceFood > 0) ? kgFoodInTheStomach - reduceFood : 0;
     }
 
-    private boolean isCanProduceOffspringWithThisAnimal(Cell cell, Animal animalMeTryToProduceOffspring) {
-        if(!animalMeTryToProduceOffspring.isHungry()
+    private boolean isCanProduceOffspringWithThisAnimal(Animal animalMeTryToProduceOffspring) {
+        return !animalMeTryToProduceOffspring.isHungry()
                 && this != animalMeTryToProduceOffspring
                 && (getClass() == animalMeTryToProduceOffspring.getClass())
                 && !animalMeTryToProduceOffspring.isProduceOffspring()
-                && cell.howManyAnimalsOfThisClassInTheCell(getClass()) + 1 <= maxAmountPerCell)
-            return true;
-        return false;
+                && Island.howManyAnimalsOfThisClassInTheCell(x, y, getClass()) + 1 <= maxAmountPerCell;
     }
 }

@@ -2,15 +2,12 @@ package Island;
 
 import Animals.*;
 
-import java.util.Arrays;
-
 public class Statistics {
 
     public static void printPlantsInAllCells() {
         sendMessage("============= Kg plant in cells: =============");
         String numberString;
         int lengthMaxY = String.valueOf(Configuration.maxY).length();
-        int lengthMaxX = String.valueOf(Configuration.maxY).length();
         int countUnderline = 0;
         sendMessageWithoutLineSeparator(" ".repeat(lengthMaxY + 1) + "|| ");
         for (int j = 0; j < Configuration.maxX; j++) {
@@ -24,7 +21,7 @@ public class Statistics {
         sendMessage("=".repeat(countUnderline + 4));
 
         for (int i = 0; i < Configuration.maxY; i++) {
-            numberString = " ".repeat(lengthMaxY - String.valueOf(i).length()) + String.valueOf(i);
+            numberString = " ".repeat(lengthMaxY - String.valueOf(i).length()) + i;
             sendMessageWithoutLineSeparator(numberString + " || ");
             for (int j = 0; j < Configuration.maxX; j++) {
                 numberString = String.format("%.2f", Island.islandMap[i][j].getQuantityPlants());
