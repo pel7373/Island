@@ -39,12 +39,12 @@ public class Island {
         return animal;
     }
 
-    public static void removeAnimalFromTheCell(Animal animal) {
-        islandMap[animal.getY()][animal.getX()].remove(animal);
-    }
-
     public static void addAnimalToTheCell(Animal animal) {
         islandMap[animal.getY()][animal.getX()].add(animal);
+    }
+
+    public static void removeAnimalFromTheCell(Animal animal) {
+        islandMap[animal.getY()][animal.getX()].remove(animal);
     }
 
     public static String getInfoFromCellWhatCanEat(int x, int y) {
